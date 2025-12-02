@@ -1,4 +1,5 @@
 package Menus;
+
 import Solitario.Clases.Mazo;
 import javax.swing.*;
 import java.awt.*;
@@ -21,11 +22,34 @@ public class MainMenu extends JFrame {
         setLayout(new BorderLayout());
 
         // 2. Panel del Título (Norte)
-        JPanel panelTitulo = new JPanel();
-        panelTitulo.setBorder(BorderFactory.createEmptyBorder(40, 0, 20, 0));
-        JLabel lblTitulo = new JLabel("Steam 2");
+        // CAMBIO: Usamos BorderLayout para poder poner el botón a la derecha
+        JPanel panelTitulo = new JPanel(new BorderLayout());
+        panelTitulo.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20)); // Márgenes
+
+        // -- Título Central --
+        JLabel lblTitulo = new JLabel("Steam 2", SwingConstants.CENTER);
         lblTitulo.setFont(new Font("Arial", Font.BOLD, 36));
-        panelTitulo.add(lblTitulo);
+
+        // -- Botón de Información (?) --
+        JButton btnInfo = new JButton("?");
+        btnInfo.setFont(new Font("Arial", Font.BOLD, 18));
+
+        btnInfo.setPreferredSize(new Dimension(45, 45));
+        btnInfo.setBackground(Color.WHITE);
+        btnInfo.setForeground(Color.BLACK); // <--- CAMBIO AQUÍ (Texto negro)
+        btnInfo.setFocusPainted(false);
+        // Acción del botón
+        btnInfo.addActionListener(e -> mostrarInformacion());
+
+        // Panel auxiliar para el botón (para que no se estire)
+        JPanel panelBotonContainer = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        panelBotonContainer.setOpaque(false); // Transparente
+        panelBotonContainer.add(btnInfo);
+
+        // Agregamos componentes al panel de título
+        panelTitulo.add(lblTitulo, BorderLayout.CENTER);
+        panelTitulo.add(panelBotonContainer, BorderLayout.EAST);
+
         add(panelTitulo, BorderLayout.NORTH);
 
         // 3. Panel de Juegos (Centro)
@@ -34,8 +58,6 @@ public class MainMenu extends JFrame {
         gbc.insets = new Insets(20, 20, 20, 20); // Espacio entre los cuadros
 
         // --- JUEGO 1: AJEDREZ ---
-        // Pasa la ruta de la imagen como tercer argumento (ej: "/Recursos/icon_chess.png")
-        // Si no tienes imagen aún, pasa null.
         JButton btnAjedrez = crearBotonJuego(null, Color.WHITE, "/Recursos/AjedrezIcon.png");
         btnAjedrez.addActionListener(e -> abrirAjedrez());
         panelJuegos.add(crearPanelJuego(btnAjedrez, "Ajedrez"), gbc);
@@ -45,7 +67,7 @@ public class MainMenu extends JFrame {
         btnSolitario.addActionListener(e -> abrirSolitario());
         panelJuegos.add(crearPanelJuego(btnSolitario, "Solitario"), gbc);
 
-        // --- JUEGO 3: JUEGO Y ---
+        // --- JUEGO 3: LUDO ---
         JButton btnJuego3 = crearBotonJuego(null, Color.WHITE, "/Recursos/LudoIcon.jpg");
         btnJuego3.addActionListener(e -> abrirLudo());
         panelJuegos.add(crearPanelJuego(btnJuego3, "Ludo"), gbc);
@@ -53,10 +75,30 @@ public class MainMenu extends JFrame {
         add(panelJuegos, BorderLayout.CENTER);
     }
 
-    /**
-     * Crea un botón cuadrado que soporta iconos.
-     * @param rutaIcono La ruta dentro de 'src' (ej: "/Recursos/miImagen.png") o null.
-     */
+    // =================================================================================
+    //                            MÉTODO NUEVO: INFO
+    // =================================================================================
+
+    private void mostrarInformacion() {
+        String mensaje = "<html><center><h2>Proyecto Algoritmo y estructura de datos 1</h2>" +
+                "<p><b>Universidad Tecnológica del Perú</b></p><br>" +
+                "<p>Facultad de Ingenieria</p><br>" +
+                "<p><b>Integrantes:</b></p>" +
+                "<p> - Aron Fabrizio Bamberger Buleje</p>" +
+                "<p> - Santiago Alonso Capcha Esteban</p>" +
+                "<p> - Panta Inga, Bernabé Robert Junior </p>" +
+                "</center></html>";
+
+        JOptionPane.showMessageDialog(this,
+                mensaje,
+                "Acerca de Steam 2",
+                JOptionPane.PLAIN_MESSAGE);
+    }
+
+    // =================================================================================
+    //                            RESTO DEL CÓDIGO
+    // =================================================================================
+
     private JButton crearBotonJuego(String texto, Color colorFondo, String rutaIcono) {
         JButton btn = new JButton(texto);
         btn.setPreferredSize(new Dimension(200, 200));
@@ -65,23 +107,18 @@ public class MainMenu extends JFrame {
         btn.setFont(new Font("Arial", Font.BOLD, 20));
         btn.setFocusPainted(false);
 
-        // Lógica para poner el icono si la ruta existe
         if (rutaIcono != null) {
             URL imgUrl = getClass().getResource(rutaIcono);
             if (imgUrl != null) {
                 ImageIcon originalIcon = new ImageIcon(imgUrl);
-                // Redimensionar la imagen para que no tape todo el botón (ej. 100x100)
                 Image scaledImage = originalIcon.getImage().getScaledInstance(100, 100, Image.SCALE_SMOOTH);
                 btn.setIcon(new ImageIcon(scaledImage));
-
-                // Acomodar texto e imagen (Imagen arriba, texto abajo)
                 btn.setHorizontalTextPosition(SwingConstants.CENTER);
                 btn.setVerticalTextPosition(SwingConstants.BOTTOM);
             } else {
                 System.out.println("No se encontró la imagen: " + rutaIcono);
             }
         }
-
         return btn;
     }
 
@@ -97,24 +134,16 @@ public class MainMenu extends JFrame {
         return panel;
     }
 
-    // =================================================================================
-    //                            LOGICA PARA ABRIR JUEGOS
-    // =================================================================================
-
     private void abrirAjedrez() {
-        this.setVisible(false); // Ocultar el Hub
-
+        this.setVisible(false);
         JFrame ventanaJuego = new JFrame("Ajedrez - Partida");
         ventanaJuego.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-
-        // Agregar listener para detectar cuando se cierra el juego
         ventanaJuego.addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosed(WindowEvent e) {
-                setVisible(true); // Volver a mostrar el Hub
+                setVisible(true);
             }
         });
-
         Ajedrez.main.Tablero tableroAjedrez = new Ajedrez.main.Tablero();
         ventanaJuego.add(tableroAjedrez);
         ventanaJuego.pack();
@@ -123,18 +152,14 @@ public class MainMenu extends JFrame {
     }
 
     private void abrirSolitario() {
-        this.setVisible(false); // Ocultar el Hub
-
-        // 1. Crear la ventana del juego
+        this.setVisible(false);
         JFrame ventanaJuego = new JFrame("Solitario - Partida");
         ventanaJuego.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        ventanaJuego.setSize(1000, 800); // Darle un tamaño inicial adecuado
-
-        // 2. Configurar el evento para volver al menú al cerrar
+        ventanaJuego.setSize(1000, 800);
         ventanaJuego.addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosed(WindowEvent e) {
-                setVisible(true); // Volver a mostrar el Hub
+                setVisible(true);
             }
         });
         Mazo mazo = new Mazo();
@@ -151,10 +176,7 @@ public class MainMenu extends JFrame {
 
     private void abrirLudo() {
         this.setVisible(false);
-        // Crear la instancia de la ventana del Ludo
         Ludo.Main ludoGame = new Ludo.Main();
-
-        // Listener para volver al menú al cerrar
         ludoGame.addWindowListener(new java.awt.event.WindowAdapter() {
             @Override
             public void windowClosed(java.awt.event.WindowEvent e) {
