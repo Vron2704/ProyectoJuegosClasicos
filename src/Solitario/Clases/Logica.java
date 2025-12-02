@@ -25,22 +25,26 @@ public class Logica {
             System.out.println("Error: No puedes colocar cartas alli.");
             return false;
         }
-        if(esColumnaSimbolo){
-            if(esVacio){
-                if(carta.getValor()==1){
-                    return true; 
-                }else{
-                    System.out.println("Error: Solo puedes colocar Ases en una columna de simbolo vacia.");
-                    return false;
-                }
-            }
-            if(carta.getValor()==columnaTope.getValor()+1 &&
-            carta.getPalo().equals(columnaTope.getPalo())){
-               return true; 
-            }
-            System.out.println("Error: El orden de colocacion de las cartas en una columna de simbolo debe ser ascendente y de simbolos iguales.");
+        if (esColumnaSimbolo){
+            if (esVacio) {
+                if (carta.getValor() == 1 &&
+                        etiqueta.equals("Columna " + carta.getPalo().name())) {
+                    return true;
+                } else{
+            System.out.println("Error: Solo puedes colocar el As del palo correspondiente en esta columna.");
             return false;
         }
+    }
+
+    if (carta.getPalo().equals(columnaTope.getPalo()) &&
+        carta.getValor() == columnaTope.getValor() + 1) {
+        return true;
+    }
+
+    System.out.println("Error: El orden en columnas de símbolo es ascendente y del mismo palo.");
+    return false;
+        }
+
         
         if(esVacio){
             if(carta.getValor()==13){

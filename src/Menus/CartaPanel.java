@@ -1,8 +1,10 @@
 package Menus;
+
 import Solitario.Clases.Carta;
 import Solitario.Clases.Columna;
 import Solitario.Clases.Logica;
 import Solitario.Clases.Mazo;
+
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Image;
@@ -10,26 +12,37 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionAdapter;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Stack;
+
 import javax.imageio.ImageIO;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
+import javax.swing.BorderFactory;
+import javax.swing.JOptionPane;
 
-public class CartaPanel extends JPanel{
-    
+public class CartaPanel extends JPanel {
+
     private Carta cartaSeleccionada = null;
     private Columna columnaOrigen = null;
     private int offsetX, offsetY;
     private int dragX, dragY;
     private Image iconCorazon, iconEspada, iconTrebol, iconDiamante;
     private int indiceCartaSeleccionada = -1;
-    private java.util.List<Carta> cartasArrastradas = new java.util.ArrayList<>();
-    private int offsetYGrupo = 0; // para mover correctamente la subcolumna
+    private final List<Carta> cartasArrastradas = new ArrayList<>();
+    private int offsetYGrupo = 0;
+    private final Mazo mazo;
 
-    
-    private Mazo mazo;
+    private boolean juegoTerminado = false;
+
+    private JTextArea areaMensajes;
+
     public CartaPanel(Mazo mazo) {
         this.mazo = mazo;
+
         try {
             iconCorazon = ImageIO.read(getClass().getResource("/Recursos/IconoCorazon.png"));
             iconEspada  = ImageIO.read(getClass().getResource("/Recursos/IconoEspada.png"));
@@ -38,32 +51,55 @@ public class CartaPanel extends JPanel{
         } catch (IOException e) {
             e.printStackTrace();
         }
+
         setBackground(new Color(0, 100, 0));
-        addMouseListener(new MouseAdapter(){
+        setLayout(null);
+
+        areaMensajes = new JTextArea();
+        areaMensajes.setEditable(false);
+        areaMensajes.setLineWrap(true);
+        areaMensajes.setWrapStyleWord(true);
+        areaMensajes.setBackground(new Color(240, 240, 240));
+
+        JScrollPane scroll = new JScrollPane(areaMensajes);
+        scroll.setBounds(1000, 20, 260, 600);
+        scroll.setBorder(BorderFactory.createTitledBorder("Mensajes"));
+        add(scroll);
+
+        addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
+                if (juegoTerminado) return;
                 manejarMousePressed(e);
             }
 
             @Override
             public void mouseReleased(MouseEvent e) {
+                if (juegoTerminado) return;
                 manejarMouseReleased(e);
             }
-            });
+        });
 
         addMouseMotionListener(new MouseMotionAdapter() {
             @Override
             public void mouseDragged(MouseEvent e) {
+                if (juegoTerminado) return;
                 manejarMouseDragged(e);
             }
         });
+
         setDoubleBuffered(true);
     }
-    
+
+    public void log(String msg) {
+        areaMensajes.append(msg + "\n");
+        areaMensajes.setCaretPosition(areaMensajes.getDocument().getLength());
+    }
+
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
-        
+
         int cartaAncho = 80;
         int cartaAlto = 120;
         int columnaEspaciado = 60;
@@ -78,6 +114,7 @@ public class CartaPanel extends JPanel{
             int x = margenIzquierda + (i - 1) * (cartaAncho + columnaEspaciado);
             int y = margenSuperior1;
             int offset = 25;
+
             for (int c = 0; c < col.getStackCarta().size(); c++) {
                 Carta carta = col.getStackCarta().get(c);
                 Image img = carta.getEsBocaArriba() ?
@@ -91,30 +128,24 @@ public class CartaPanel extends JPanel{
             Columna col = columnas.get("Columna extra " + i);
             int x = margenIzquierda + (i - 1) * (cartaAncho + columnaEspaciado);
             int y = margenSuperior2;
+
             if (col.getStackCarta().isEmpty()) {
                 g.drawRect(x, y, cartaAncho, cartaAlto);
             } else {
                 Carta carta = col.getStackCarta().peek();
-                Image img = carta.getEsBocaArriba() ? 
-                            carta.getImagenBocaArriba() :
-                            carta.getImagenBocaAbajo();
+                Image img = carta.getEsBocaArriba() ? carta.getImagenBocaArriba() : carta.getImagenBocaAbajo();
                 g.drawImage(img, x, y, cartaAncho, cartaAlto, this);
             }
         }
 
         String[] palos = {"CORAZON", "ESPADA", "TREBOL", "DIAMANTE"};
-
-        
         for (int i = 0; i < 4; i++) {
             Columna col = columnas.get("Columna " + palos[i]);
-
             int x = margenIzquierda + (i + 3) * (cartaAncho + columnaEspaciado);
             int y = margenSuperior2;
 
             if (col.getStackCarta().isEmpty()) {
-
                 g.drawRect(x, y, cartaAncho, cartaAlto);
-
                 Image icon = switch (i) {
                     case 0 -> iconCorazon;
                     case 1 -> iconEspada;
@@ -122,151 +153,159 @@ public class CartaPanel extends JPanel{
                     default -> iconDiamante;
                 };
                 if (icon != null) {
-                    int iconWidth = 40;
-                    int iconHeight = 40;
-                    int iconX = x + (cartaAncho - iconWidth) / 2;
-                    int iconY = y + (cartaAlto - iconHeight) / 2;
-
-                    g.drawImage(icon, iconX, iconY, iconWidth, iconHeight, this);
+                    g.drawImage(icon, x + 20, y + 40, 40, 40, this);
                 }
-            }else{
+            } else {
                 Carta carta = col.getStackCarta().peek();
-                Image img = carta.getEsBocaArriba() ?
-                        carta.getImagenBocaArriba() :
-                        carta.getImagenBocaAbajo();
+                Image img = carta.getEsBocaArriba() ? carta.getImagenBocaArriba() : carta.getImagenBocaAbajo();
                 g.drawImage(img, x, y, cartaAncho, cartaAlto, this);
             }
         }
-        // Si hay una carta siendo arrastrada, dibujarla encima
+
         if (!cartasArrastradas.isEmpty()) {
-    int offset = 25;
-    int yy = dragY;
-
-    for (Carta c : cartasArrastradas) {
-        Image img = c.getEsBocaArriba() ?
-            c.getImagenBocaArriba() :
-            c.getImagenBocaAbajo();
-
-        g.drawImage(img, dragX, yy, 80, 120, this);
-        yy += offset;
+            int offset = 25;
+            int yy = dragY;
+            for (Carta c : cartasArrastradas) {
+                Image img = c.getEsBocaArriba() ?
+                            c.getImagenBocaArriba() :
+                            c.getImagenBocaAbajo();
+                g.drawImage(img, dragX, yy, 80, 120, this);
+                yy += offset;
+            }
+        }
     }
-}
 
-    }
-    
     private void manejarMousePressed(MouseEvent e) {
         int mx = e.getX();
-    int my = e.getY();
+        int my = e.getY();
 
-    int cartaAncho = 80;
-    int cartaAlto = 120;
-    int columnaEspaciado = 60;
-    int margenIzquierda = 40;
-    int margenSuperior2 = 20;
+        int cartaAncho = 80;
+        int cartaAlto = 120;
+        int columnaEspaciado = 60;
+        int margenIzquierda = 40;
+        int margenSuperior2 = 20;
 
-    Map<String, Columna> columnas = mazo.getColumnas();
+        Map<String, Columna> columnas = mazo.getColumnas();
 
-    Columna extra1 = columnas.get("Columna extra 1");
-    Columna extra2 = columnas.get("Columna extra 2");
+        Columna extra1 = columnas.get("Columna extra 1");
+        Columna extra2 = columnas.get("Columna extra 2");
 
-    int xExtra1 = margenIzquierda + 0 * (cartaAncho + columnaEspaciado);
-    int xExtra2 = margenIzquierda + 1 * (cartaAncho + columnaEspaciado);
-    int yExtra  = margenSuperior2;
+        int xExtra1 = margenIzquierda;
+        int xExtra2 = margenIzquierda + (cartaAncho + columnaEspaciado);
+        int yExtra  = margenSuperior2;
 
-    // ================================
-    //   CLICK en EXTRA 1
-    // ================================
-    if (mx >= xExtra1 && mx <= xExtra1 + cartaAncho &&
-        my >= yExtra  && my <= yExtra  + cartaAlto) {
+        if (mx >= xExtra1 && mx <= xExtra1 + cartaAncho &&
+            my >= yExtra && my <= yExtra + cartaAlto) {
 
-        if (extra1.getStackCarta().isEmpty()) {
-            // EXTRA1 vacío → reciclar todas de EXTRA2
-            reciclarExtra2aExtra1(extra1, extra2);
-        } else {
-            // EXTRA1 tiene carta → mover top a EXTRA2
-            moverTopDeExtra1aExtra2(extra1, extra2);
+            if (extra1.getStackCarta().isEmpty()) {
+                reciclarExtra2aExtra1(extra1, extra2);
+                log("Se recicló extra 2 a extra 1.");
+            } else {
+                moverTopDeExtra1aExtra2(extra1, extra2);
+                log("Se movió carta de extra 1 a extra 2.");
+            }
+
+            repaint();
+            return;
         }
 
-        repaint();
-        return;  // <- IMPORTANTE
-    }
+        if (mx >= xExtra2 && mx <= xExtra2 + cartaAncho &&
+            my >= yExtra && my <= yExtra + cartaAlto) {
 
-// ================================
-//   CLICK en EXTRA 2
-// ================================
-if (mx >= xExtra2 && mx <= xExtra2 + cartaAncho &&
-    my >= yExtra  && my <= yExtra  + cartaAlto) {
+            if (extra2.getStackCarta().isEmpty()) {
+                moverTopDeExtra1aExtra2(extra1, extra2);
+                log("Se movió carta de extra 1 a extra 2.");
+                repaint();
+                return;
+            }
 
-    if (extra2.getStackCarta().isEmpty()) {
-        // EXTRA2 vacío → mover 1 carta desde EXTRA1
-        moverTopDeExtra1aExtra2(extra1, extra2);
-        repaint();
-        return;
-    }
+            Carta carta = extra2.getStackCarta().peek();
+            if (!carta.getEsBocaArriba()) return;
 
-    // EXTRA2 tiene carta → iniciar arrastre de la carta superior
-    Carta carta = extra2.getStackCarta().peek();
+            cartaSeleccionada = carta;
+            columnaOrigen = extra2;
+            indiceCartaSeleccionada = extra2.getStackCarta().size() - 1;
 
-    if (!carta.getEsBocaArriba()) return;
+            offsetX = mx - xExtra2;
+            offsetY = my - yExtra;
+            dragX = mx - offsetX;
+            dragY = my - offsetY;
 
-    cartaSeleccionada = carta;
-    columnaOrigen = extra2;
-    indiceCartaSeleccionada = extra2.getStackCarta().size() - 1;
+            cartasArrastradas.clear();
+            cartasArrastradas.add(carta);
 
-    offsetX = mx - xExtra2;
-    offsetY = my - yExtra;
+            repaint();
+            return;
+        }
 
-    dragX = mx - offsetX;
-    dragY = my - offsetY;
+        int margenSuperior1 = 160;
 
-    // IMPORTANT: al arrastrar desde extra2 también debemos poblar cartasArrastradas
-    cartasArrastradas.clear();
-    cartasArrastradas.add(carta);
+        for (int i = 1; i <= 7; i++) {
+            int x = margenIzquierda + (i - 1) * (cartaAncho + columnaEspaciado);
+            int y = margenSuperior1;
 
-    repaint();
-    return;
-}
+            Columna col = columnas.get("Columna " + i);
+            int offset = 25;
 
-    // === 1. BUSCAR EN LAS 7 COLUMNAS PRINCIPALES ===
-    int margenSuperior1 = 160;
+            for (int c = col.getStackCarta().size() - 1; c >= 0; c--) {
+                int cy = y + c * offset;
 
-    for (int i = 1; i <= 7; i++) {
-        int x = margenIzquierda + (i - 1) * (cartaAncho + columnaEspaciado);
-        int y = margenSuperior1;
+                if (mx >= x && mx <= x + cartaAncho &&
+                    my >= cy && my <= cy + cartaAlto) {
 
-        Columna col = columnas.get("Columna " + i);
-        int offset = 25;
+                    Carta carta = col.getStackCarta().get(c);
+                    if (!carta.getEsBocaArriba()) return;
 
-        // recorre de arriba hacia abajo
-        for (int c = col.getStackCarta().size() - 1; c >= 0; c--) {
+                    cartaSeleccionada = carta;
+                    columnaOrigen = col;
+                    indiceCartaSeleccionada = c;
 
-            int cy = y + c * offset;
+                    cartasArrastradas.clear();
+                    for (int k = c; k < col.getStackCarta().size(); k++) {
+                        cartasArrastradas.add(col.getStackCarta().get(k));
+                    }
+
+                    offsetX = mx - x;
+                    offsetY = my - cy;
+                    offsetYGrupo = my - cy;
+
+                    dragX = mx - offsetX;
+                    dragY = my - offsetY;
+
+                    repaint();
+                    return;
+                }
+            }
+        }
+
+        String[] palos = {"CORAZON", "ESPADA", "TREBOL", "DIAMANTE"};
+        for (int i = 0; i < 4; i++) {
+
+            int x = margenIzquierda + (i + 3) * (cartaAncho + columnaEspaciado);
+            int y = margenSuperior2;
+
+            Columna col = columnas.get("Columna " + palos[i]);
+
+            if (col.getStackCarta().isEmpty()) continue;
+
+            Carta carta = col.getStackCarta().peek();
 
             if (mx >= x && mx <= x + cartaAncho &&
-                my >= cy && my <= cy + cartaAlto)
-            {
-                Carta carta = col.getStackCarta().get(c);
+                my >= y && my <= y + cartaAlto) {
 
                 if (!carta.getEsBocaArriba()) return;
 
                 cartaSeleccionada = carta;
                 columnaOrigen = col;
-                indiceCartaSeleccionada = c;
+                indiceCartaSeleccionada = col.getStackCarta().size() - 1;
 
-// Extraer TODAS las cartas desde la seleccionada hacia abajo
-                cartasArrastradas.clear();
-                for (int k = c; k < col.getStackCarta().size(); k++) {
-                    cartasArrastradas.add(col.getStackCarta().get(k));
-                }
-
-// offsets
                 offsetX = mx - x;
-                offsetY = my - cy;
-
-                offsetYGrupo = my - (cy); // para mantener separación entre cartas al arrastrar
-
+                offsetY = my - y;
                 dragX = mx - offsetX;
                 dragY = my - offsetY;
+
+                cartasArrastradas.clear();
+                cartasArrastradas.add(carta);
 
                 repaint();
                 return;
@@ -274,40 +313,6 @@ if (mx >= xExtra2 && mx <= xExtra2 + cartaAncho &&
         }
     }
 
-    // === 2. BUSCAR EN COLUMNAS DE SÍMBOLO ===
-    String[] palos = {"CORAZON", "ESPADA", "TREBOL", "DIAMANTE"};
-
-    for (int i = 0; i < 4; i++) {
-
-        int x = margenIzquierda + (i + 3) * (cartaAncho + columnaEspaciado);
-        int y = margenSuperior2;
-
-        Columna col = columnas.get("Columna " + palos[i]);
-
-        if (col.getStackCarta().isEmpty()) continue;
-
-        // Sólo hay 1 carta en estas columnas → el tope
-        Carta carta = col.getStackCarta().peek();
-
-        if (mx >= x && mx <= x + cartaAncho &&
-            my >= y && my <= y + cartaAlto)
-        {
-            if (!carta.getEsBocaArriba()) return;
-
-            cartaSeleccionada = carta;
-            columnaOrigen = col;
-            indiceCartaSeleccionada = col.getStackCarta().size() - 1;
-
-            offsetX = mx - x;
-            offsetY = my - y;
-            dragX = mx - offsetX;
-            dragY = my - offsetY;
-
-            repaint();
-            return;
-        }
-    }
-    }
     private void manejarMouseDragged(MouseEvent e) {
         if (cartaSeleccionada != null) {
             dragX = e.getX() - offsetX;
@@ -315,179 +320,148 @@ if (mx >= xExtra2 && mx <= xExtra2 + cartaAncho &&
             repaint();
         }
     }
+
     private void manejarMouseReleased(MouseEvent e) {
+        if (cartaSeleccionada == null) return;
 
-    if (cartaSeleccionada == null) return;
+        int mx = e.getX();
+        int my = e.getY();
 
-    int mx = e.getX();
-    int my = e.getY();
+        int cartaAncho = 80;
+        int cartaAlto = 120;
+        int columnaEspaciado = 60;
+        int margenIzquierda = 40;
 
-    int cartaAncho = 80;
-    int cartaAlto = 120;
-    int columnaEspaciado = 60;
-    int margenIzquierda = 40;
+        Map<String, Columna> columnas = mazo.getColumnas();
+        Columna columnaDestino = null;
 
-    Map<String, Columna> columnas = mazo.getColumnas();
-    Columna columnaDestino = null;
-
-    // --- Buscar columna normal ---
-    int margenSuperior1 = 160;
-    for (int i = 1; i <= 7; i++) {
-        int x = margenIzquierda + (i - 1) * (cartaAncho + columnaEspaciado);
-        int y = margenSuperior1;
-
-        if (mx >= x && mx <= x + cartaAncho &&
-            my >= y && my <= y + 400) 
-        {
-            columnaDestino = columnas.get("Columna " + i);
-            break;
-        }
-    }
-
-    // --- Buscar columnas de símbolo ---
-    if (columnaDestino == null) {
-        int margenSuperior2 = 20;
-        String[] palos = {"CORAZON", "ESPADA", "TREBOL", "DIAMANTE"};
-
-        for (int i = 0; i < 4; i++) {
-            int x = margenIzquierda + (i + 3) * (cartaAncho + columnaEspaciado);
-            int y = margenSuperior2;
+        int margenSuperior1 = 160;
+        for (int i = 1; i <= 7; i++) {
+            int x = margenIzquierda + (i - 1) * (cartaAncho + columnaEspaciado);
+            int y = margenSuperior1;
 
             if (mx >= x && mx <= x + cartaAncho &&
-                my >= y && my <= y + cartaAlto) {
-
-                columnaDestino = columnas.get("Columna " + palos[i]);
+                my >= y && my <= y + 400) {
+                columnaDestino = columnas.get("Columna " + i);
                 break;
             }
         }
+
+        if (columnaDestino == null) {
+            int margenSuperior2 = 20;
+            String[] palos = {"CORAZON", "ESPADA", "TREBOL", "DIAMANTE"};
+
+            for (int i = 0; i < 4; i++) {
+                int x = margenIzquierda + (i + 3) * (cartaAncho + columnaEspaciado);
+                int y = margenSuperior2;
+
+                if (mx >= x && mx <= x + cartaAncho &&
+                    my >= y && my <= y + cartaAlto) {
+                    columnaDestino = columnas.get("Columna " + palos[i]);
+                    break;
+                }
+            }
+        }
+
+        if (columnaDestino == null) {
+            log("Movimiento inválido: no soltó en ninguna columna.");
+            resetSeleccion();
+            repaint();
+            return;
+        }
+
+        if (!Logica.evaluarMovimiento(cartaSeleccionada, columnaDestino)) {
+            log("Movimiento no permitido hacia " + columnaDestino.getEtiqueta());
+            resetSeleccion();
+            repaint();
+            return;
+        }
+
+        boolean esSimbolo = columnaDestino.getEtiqueta().startsWith("Columna ")
+                          && (columnaDestino.getEtiqueta().contains("CORAZON") ||
+                              columnaDestino.getEtiqueta().contains("ESPADA") ||
+                              columnaDestino.getEtiqueta().contains("TREBOL") ||
+                              columnaDestino.getEtiqueta().contains("DIAMANTE"));
+
+        if (esSimbolo) {
+            if (!columnaDestino.equals(columnaOrigen)) {
+                columnaOrigen.getStackCarta().remove(indiceCartaSeleccionada);
+                columnaDestino.anadirCarta(cartaSeleccionada);
+                log("Movida carta a " + columnaDestino.getEtiqueta());
+            }
+        } else {
+            for (Carta c : cartasArrastradas) {
+                columnaDestino.anadirCarta(c);
+            }
+
+            Stack<Carta> origen = columnaOrigen.getStackCarta();
+            for (int i = origen.size() - 1; i >= indiceCartaSeleccionada; i--) {
+                origen.remove(i);
+            }
+
+            log("Movida subcolumna a " + columnaDestino.getEtiqueta());
+        }
+
+        if (!columnaOrigen.getStackCarta().isEmpty()) {
+            Carta tope = columnaOrigen.getStackCarta().peek();
+            if (!tope.getEsBocaArriba()) {
+                tope.setEsBocaArriba(true);
+                log("Se volteó la carta superior de " + columnaOrigen.getEtiqueta());
+            }
+        }
+
+        if (Logica.evaluarJuegoCompletado(mazo)) {
+
+            juegoTerminado = true;
+
+            JOptionPane.showMessageDialog(
+                this,
+                "¡Felicidades! Has completado el solitario.",
+                "Juego terminado",
+                JOptionPane.INFORMATION_MESSAGE
+            );
+
+            log("El jugador completó el solitario.");
+            repaint();
+            return;
+        }
+
+        resetSeleccion();
+        repaint();
     }
 
-    // --- Si no soltó en una zona válida ---
-    if (columnaDestino == null) {
-
-        // LIMPIAR PARA EVITAR DUPLICADOS
+    private void resetSeleccion() {
         cartaSeleccionada = null;
         cartasArrastradas.clear();
         columnaOrigen = null;
         indiceCartaSeleccionada = -1;
-
-        repaint();
-        return;
     }
 
-    // --- Movimiento válido según la lógica con consideración especial para columnas símbolo ---
-if (Logica.evaluarMovimiento(cartaSeleccionada, columnaDestino)) {
-
-    // Detectar si columnaDestino es una columna de símbolo (tus etiquetas: "Columna CORAZON", etc.)
-    String etiquetaDestino = columnaDestino.getEtiqueta();
-    boolean esColumnaSimbolo = etiquetaDestino.equals("Columna CORAZON")
-                            || etiquetaDestino.equals("Columna ESPADA")
-                            || etiquetaDestino.equals("Columna TREBOL")
-                            || etiquetaDestino.equals("Columna DIAMANTE");
-
-    if (esColumnaSimbolo) {
-        // SOLO mover UNA carta (la carta seleccionada)
-        columnaDestino.anadirCarta(cartaSeleccionada);
-        // remover esa carta del origen
-        columnaOrigen.getStackCarta().remove(indiceCartaSeleccionada);
-    } else {
-        // mover TODAS las cartas arrastradas (subcolumna)
-        for (Carta c : cartasArrastradas) {
-            columnaDestino.anadirCarta(c);
-        }
-
-        // eliminar del origen desde el índice seleccionado hacia abajo
-        for (int i = columnaOrigen.getStackCarta().size() - 1; i >= indiceCartaSeleccionada; i--) {
-            columnaOrigen.getStackCarta().remove(i);
-        }
-    }
-
-    // Voltear la carta superior del origen si quedó boca abajo
-    if (!columnaOrigen.getStackCarta().isEmpty()) {
-        Carta tope = columnaOrigen.getStackCarta().peek();
-        if (!tope.getEsBocaArriba()) tope.setEsBocaArriba(true);
-    }
-
-} else {
-    System.out.println("Movimiento no permitido");
-}
-
-
-    // --- Limpieza final obligatoria ---
-    cartaSeleccionada = null;
-    cartasArrastradas.clear();  // <---------------- EL FIX IMPORTANTE
-    columnaOrigen = null;
-    indiceCartaSeleccionada = -1;
-
-    repaint();
-}
-
-    private void rotarColumnaExtra(Map<String, Columna> columnas) {
-
-    Columna extra1 = columnas.get("Columna extra 1");
-    Columna extra2 = columnas.get("Columna extra 2");
-
-    // Si no hay cartas en extra1 → no hacemos nada por ahora
-    if (extra1.getStackCarta().isEmpty()) {
-        return;
-    }
-
-    // 1. Tomar la carta superior
-    Carta carta = extra1.getStackCarta().pop();
-
-    // La carta que va a extra2 siempre boca arriba
-    carta.setEsBocaArriba(true);
-
-    // 2. Mover carta a extra2
-    extra2.getStackCarta().push(carta);
-    carta.setColumnaActual(extra2);
-
-    // 3. Asegurar que en extra1: 
-    //    - todas boca abajo
-    //    - menos la carta superior que queda boca arriba
-    if (!extra1.getStackCarta().isEmpty()) {
-
-        // todas boca abajo
-        for (Carta c : extra1.getStackCarta()) {
-            c.setEsBocaArriba(false);
-        }
-
-        // excepto la carta superior
-        extra1.getStackCarta().peek().setEsBocaArriba(true);
-    }
-}
     private void moverTopDeExtra1aExtra2(Columna extra1, Columna extra2) {
-    // Mover una carta de extra1 -> extra2 (top)
-    if (extra1.getStackCarta().isEmpty()) return;
+        if (extra1.getStackCarta().isEmpty()) return;
 
-    Carta carta = extra1.getStackCarta().pop();
-    carta.setEsBocaArriba(true);            // la carta movida siempre boca arriba
-    extra2.getStackCarta().push(carta);
-    carta.setColumnaActual(extra2);
+        Carta carta = extra1.getStackCarta().pop();
+        carta.setEsBocaArriba(true);
+        extra2.getStackCarta().push(carta);
 
-    // Ajustar extra1: todas boca abajo excepto la tope
-    if (!extra1.getStackCarta().isEmpty()) {
-        for (Carta c : extra1.getStackCarta()) c.setEsBocaArriba(false);
-        extra1.getStackCarta().peek().setEsBocaArriba(true);
-    }
-}
-
-private void reciclarExtra2aExtra1(Columna extra1, Columna extra2) {
-    // Solo si extra1 está vacía y extra2 no lo está
-    if (!extra1.getStackCarta().isEmpty()) return;
-    if (extra2.getStackCarta().isEmpty()) return;
-
-    // Transferir directamente pop desde extra2 -> push en extra1
-    while (!extra2.getStackCarta().isEmpty()) {
-        Carta c = extra2.getStackCarta().pop(); // saca la carta superior de extra2
-        c.setEsBocaArriba(false);               // volverla boca abajo
-        extra1.getStackCarta().push(c);         // ponerla en extra1 (mantiene orden original)
-        c.setColumnaActual(extra1);
+        if (!extra1.getStackCarta().isEmpty()) {
+            for (Carta c : extra1.getStackCarta()) c.setEsBocaArriba(false);
+            extra1.getStackCarta().peek().setEsBocaArriba(true);
+        }
     }
 
-    // La carta superior de extra1 debe quedar boca arriba (si existe)
-    if (!extra1.getStackCarta().isEmpty()) {
-        extra1.getStackCarta().peek().setEsBocaArriba(true);
+    private void reciclarExtra2aExtra1(Columna extra1, Columna extra2) {
+        if (!extra1.getStackCarta().isEmpty()) return;
+        if (extra2.getStackCarta().isEmpty()) return;
+
+        while (!extra2.getStackCarta().isEmpty()) {
+            Carta c = extra2.getStackCarta().pop();
+            c.setEsBocaArriba(false);
+            extra1.getStackCarta().push(c);
+        }
+
+        if (!extra1.getStackCarta().isEmpty()) {
+            extra1.getStackCarta().peek().setEsBocaArriba(true);
+        }
     }
-}
 }
