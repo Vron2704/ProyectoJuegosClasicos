@@ -1,21 +1,28 @@
 package Solitario.Clases;
 import java.util.Stack;
+/*
+Clase base de las columnas.
+
+Contiene una columna que almacena Cartas.
+
+Contiene metodos para inicializar la columna y devolverla.
+*/
 public class Columna {
-    final Stack <Carta> columna;
+    private final Stack <Carta> columna;
+    private final String etiqueta;
     
-    public Columna(Stack columna){
+    public Columna(Stack columna, String etiqueta){
         this.columna = columna;
+        this.etiqueta = etiqueta;
     }
-    public Carta sacarCarta(){
-        return columna.pop();
+    public Stack<Carta> getStackCarta(){
+        return columna;
     }
-    public Carta mostrarCarta(){
-        return columna.peek();
+    public String getEtiqueta(){
+        return etiqueta;
     }
     public void anadirCarta(Carta carta){
         columna.add(carta);
-    }
-    public String imprimirCarta(){
-        return "Carta: "+columna.peek().getterPalo()+" "+columna.peek().getterValor();
+        carta.setColumnaActual(this);
     }
 }
